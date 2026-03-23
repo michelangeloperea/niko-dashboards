@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIKO · Seguimiento de Tickets</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07080c; --s1:#0d0f16; --s2:#12151f; --s3:#181c28;
+  --border:#1c2030; --border2:#242840;
+  --solar:#f5a623; --solar2:#ffd166;
+  --green:#3de8a0; --red:#f25f5c; --blue:#5b9cf6; --purple:#b07fea; --teal:#2dd4bf;
+  --text:#dde2f0; --muted:#505870; --muted2:#7a85a0;
+  --head:'Syne',sans-serif; --mono:'DM Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);display:flex;flex-direction:column;}
+
+/* ── TOP NAV ── */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 22px;border-bottom:1px solid var(--border);
+  flex-shrink:0;background:var(--s1);
+}
+.nav-brand{display:flex;align-items:center;gap:10px;}
+.nav-icon{width:30px;height:30px;background:linear-gradient(135deg,#f5a623,#ffd166);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.nav-title{font-family:var(--head);font-size:16px;font-weight:800;}
+.nav-title em{color:var(--solar);font-style:normal;}
+.nav-tabs{display:flex;gap:2px;}
+.tab{
+  padding:6px 14px;border-radius:4px;font-size:11px;cursor:pointer;
+  letter-spacing:0.04em;border:none;background:transparent;color:var(--muted2);
+  font-family:var(--mono);transition:all .15s;
+}
+.tab:hover{background:var(--s3);color:var(--text);}
+.tab.active{background:var(--s3);color:var(--solar);border:1px solid rgba(245,166,35,0.3);}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.btn{
+  padding:6px 13px;border-radius:4px;font-size:10px;cursor:pointer;
+  letter-spacing:0.07em;text-transform:uppercase;font-family:var(--mono);
+  border:1px solid;transition:all .15s;
+}
+.btn-primary{background:rgba(245,166,35,0.12);color:var(--solar);border-color:rgba(245,166,35,0.3);}
+.btn-primary:hover{background:rgba(245,166,35,0.2);}
+.btn-ghost{background:transparent;color:var(--muted2);border-color:var(--border);}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2);}
+
+/* ── FILTERS BAR ── */
+.filters{
+  display:flex;align-items:center;gap:10px;padding:10px 22px;
+  border-bottom:1px solid var(--border);flex-shrink:0;background:var(--s1);
+  flex-wrap:wrap;
+}
+.filter-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+select,input{
+  background:var(--s2);border:1px solid var(--border);color:var(--text);
+  padding:5px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;
+  outline:none;cursor:pointer;
+}
+select:focus,input:focus{border-color:rgba(245,166,35,0.4);}
+.filter-sep{width:1px;height:20px;background:var(--border);flex-shrink:0;}
+.kpi-mini{
+  display:flex;gap:16px;margin-left:auto;
+}
+.kpim{text-align:center;}
+.kpim-val{font-family:var(--head);font-size:16px;font-weight:800;}
+.kpim-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;}
+
+/* ── MAIN LAYOUT ── */
+.main{display:flex;flex:1;overflow:hidden;}
+
+/* ── VIEWS ── */
+.view{display:none;flex:1;overflow:hidden;}
+.view.active{display:flex;flex-direction:column;}
+
+/* TABLE VIEW */
+.tbl-wrap{flex:1;overflow-y:auto;padding:0;}
+.tbl-wrap::-webkit-scrollbar{width:6px;}
+.tbl-wrap::-webkit-scrollbar-track{background:transparent;}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+table{width:100%;border-collapse:collapse;font-size:11px;}
+thead tr{position:sticky;top:0;z-index:10;background:var(--s1);}
+th{
+  text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--border);
+  font-weight:400;white-space:nowrap;cursor:pointer;user-select:none;
+}
+th:hover{color:var(--muted2);}
+td{padding:9px 12px;border-bottom:1px solid rgba(28,32,48,0.5);color:var(--muted2);vertical-align:middle;}
+tr:hover td{background:rgba(255,255,255,0.015);cursor:pointer;}
+tr.closed td{opacity:.45;}
+tr.closed td .tdmain{text-decoration:line-through;}
+.tdmain{color:var(--text);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ── KANBAN VIEW ── */
+.kanban{flex:1;overflow-x:auto;padding:16px 20px;display:flex;gap:14px;align-items:flex-start;}
+.kanban::-webkit-scrollbar{height:6px;}
+.kanban::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.k-col{min-width:240px;max-width:240px;display:flex;flex-direction:column;gap:8px;}
+.k-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-radius:5px;border:1px solid var(--border);
+  background:var(--s1);margin-bottom:4px;
+}
+.k-title{font-family:var(--head);font-size:11px;font-weight:700;}
+.k-count{font-size:10px;color:var(--muted);border:1px solid var(--border);padding:1px 7px;border-radius:10px;}
+.k-card{
+  background:var(--s1);border:1px solid var(--border);border-radius:5px;
+  padding:11px 13px;cursor:pointer;transition:border-color .15s;
+}
+.k-card:hover{border-color:var(--border2);}
+.k-card.closed{opacity:.4;}
+.k-card-title{font-size:11px;color:var(--text);margin-bottom:6px;line-height:1.4;}
+.k-card-meta{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;}
+.k-card-footer{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--muted);}
+.sla-chip{font-size:9px;padding:2px 6px;border-radius:3px;}
+.sla-ok{background:rgba(61,232,160,.1);color:var(--green);}
+.sla-warn{background:rgba(255,209,102,.12);color:var(--solar2);}
+.sla-breach{background:rgba(242,95,92,.13);color:var(--red);}
+.sla-na{background:rgba(80,88,112,.15);color:var(--muted);}
+
+/* ── CALENDAR VIEW ── */
+.cal-view{flex:1;overflow-y:auto;padding:16px 20px;}
+.cal-header{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+.cal-header h2{font-family:var(--head);font-size:16px;font-weight:800;}
+.cal-nav-btn{background:var(--s2);border:1px solid var(--border);color:var(--muted2);padding:5px 10px;border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:12px;}
+.cal-nav-btn:hover{color:var(--text);border-color:var(--border2);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
+.cal-day-lbl{text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;padding-bottom:4px;}
+.cal-cell{
+  background:var(--s1);border:1px solid var(--border);border-radius:5px;
+  min-height:90px;padding:8px;
+}
+.cal-cell.today{border-color:rgba(245,166,35,.4);}
+.cal-cell.other-month{opacity:.3;}
+.cal-date{font-size:10px;color:var(--muted2);margin-bottom:5px;font-weight:500;}
+.cal-cell.today .cal-date{color:var(--solar);font-weight:700;}
+.cal-event{
+  font-size:9px;padding:2px 5px;border-radius:3px;margin-bottom:3px;
+  cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  border-left:2px solid;
+}
+.cal-event:hover{opacity:.8;}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;text-transform:uppercase;letter-spacing:.07em;font-weight:500;white-space:nowrap;}
+.b-nuevo{background:rgba(91,156,246,.14);color:var(--blue);}
+.b-analisis{background:rgba(245,166,35,.12);color:var(--solar);}
+.b-visita{background:rgba(176,127,234,.13);color:var(--purple);}
+.b-epc{background:rgba(242,95,92,.13);color:var(--red);}
+.b-cs{background:rgba(61,232,160,.1);color:var(--green);}
+.b-revision{background:rgba(255,209,102,.12);color:var(--solar2);}
+.b-garantia{background:rgba(91,156,246,.1);color:#89b4ff;}
+.b-cerrado{background:rgba(61,232,160,.08);color:#3de8a080;border:1px solid rgba(61,232,160,.2);}
+
+.pdot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+.p-alta{background:var(--red);}
+.p-media{background:var(--solar2);}
+.p-baja{background:var(--green);}
+
+/* ── DETAIL PANEL ── */
+.detail-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;
+  display:none;align-items:flex-start;justify-content:flex-end;
+  backdrop-filter:blur(3px);
+}
+.detail-overlay.open{display:flex;}
+.detail-panel{
+  width:520px;height:100%;background:var(--s1);border-left:1px solid var(--border2);
+  overflow-y:auto;display:flex;flex-direction:column;
+  animation:slideIn .2s ease;
+}
+@keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+.detail-panel::-webkit-scrollbar{width:5px;}
+.detail-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.dp-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:18px 20px;border-bottom:1px solid var(--border);sticky;top:0;
+  background:var(--s1);position:sticky;top:0;z-index:5;
+}
+.dp-title{font-family:var(--head);font-size:14px;font-weight:700;line-height:1.4;flex:1;margin-right:12px;}
+.dp-close{background:var(--s3);border:1px solid var(--border);color:var(--muted2);width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dp-close:hover{color:var(--text);}
+.dp-body{padding:18px 20px;flex:1;}
+.dp-section{margin-bottom:20px;}
+.dp-section-title{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.dp-field label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:3px;}
+.dp-field span{font-size:11px;color:var(--text);}
+.dp-field input,.dp-field select,.dp-field textarea{
+  width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);
+  padding:6px 9px;border-radius:4px;font-family:var(--mono);font-size:11px;outline:none;
+}
+.dp-field input:focus,.dp-field select:focus,.dp-field textarea:focus{border-color:rgba(245,166,35,.4);}
+.dp-field textarea{resize:vertical;min-height:70px;line-height:1.5;}
+.dp-actions{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+
+/* SLA meter */
+.sla-bar-wrap{background:var(--s3);border-radius:3px;height:6px;overflow:hidden;margin-top:5px;}
+.sla-bar{height:100%;border-radius:3px;transition:width .5s ease;}
+
+/* Timeline */
+.timeline{display:flex;flex-direction:column;gap:0;}
+.tl-item{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid rgba(28,32,48,.5);}
+.tl-item:last-child{border:none;}
+.tl-dot{width:8px;height:8px;border-radius:50%;margin-top:3px;flex-shrink:0;}
+.tl-content{flex:1;}
+.tl-action{font-size:11px;color:var(--text);}
+.tl-time{font-size:10px;color:var(--muted);margin-top:2px;}
+.tl-note{font-size:10px;color:var(--muted2);margin-top:3px;font-style:italic;line-height:1.5;}
+
+/* add note */
+.add-note{display:flex;gap:8px;margin-top:10px;}
+.add-note input{flex:1;}
+
+/* ── CONFIRM MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--s1);border:1px solid var(--border2);border-radius:8px;
+  padding:28px 28px 20px;max-width:400px;width:90%;
+  animation:fadeUp .2s ease;
+}
+@keyframes fadeUp{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+.modal h3{font-family:var(--head);font-size:16px;font-weight:800;margin-bottom:10px;}
+.modal p{font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:18px;}
+.modal textarea{width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:9px;border-radius:4px;font-family:var(--mono);font-size:11px;outline:none;resize:vertical;min-height:80px;margin-bottom:14px;}
+.modal textarea:focus{border-color:rgba(245,166,35,.4);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+.btn-danger{background:rgba(242,95,92,.12);color:var(--red);border-color:rgba(242,95,92,.3);}
+.btn-danger:hover{background:rgba(242,95,92,.2);}
+.btn-success{background:rgba(61,232,160,.1);color:var(--green);border-color:rgba(61,232,160,.3);}
+.btn-success:hover{background:rgba(61,232,160,.18);}
+
+/* scrollbars */
+.kanban::-webkit-scrollbar{height:6px;}
+.cal-view::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* empty state */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:8px;}
+.empty-icon{font-size:32px;opacity:.4;}
+.empty-txt{font-size:12px;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-icon">☀️</div>
+    <span class="nav-title">NIKO <em>·</em> Tickets</span>
+  </div>
+  <div class="nav-tabs">
+    <button class="tab active" onclick="switchView('table')">📋 Lista</button>
+    <button class="tab" onclick="switchView('kanban')">🗂 Kanban</button>
+    <button class="tab" onclick="switchView('calendar')">📅 Calendario</button>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-primary" onclick="openNew()">+ Nuevo ticket</button>
+  </div>
+</nav>
+
+<!-- FILTERS -->
+<div class="filters">
+  <span class="filter-label">Filtrar:</span>
+  <select id="fOwner" onchange="applyFilters()">
+    <option value="">Todos los owners</option>
+  </select>
+  <select id="fStatus" onchange="applyFilters()">
+    <option value="">Todos los status</option>
+  </select>
+  <select id="fPrioridad" onchange="applyFilters()">
+    <option value="">Toda prioridad</option>
+    <option value="Alta">Alta</option>
+    <option value="Mediana">Mediana</option>
+    <option value="Baja">Baja</option>
+  </select>
+  <select id="fProblema" onchange="applyFilters()">
+    <option value="">Todo tipo</option>
+  </select>
+  <input id="fSearch" type="text" placeholder="Buscar cliente…" oninput="applyFilters()" style="width:180px">
+  <label style="font-size:10px;color:var(--muted2);display:flex;align-items:center;gap:5px;cursor:pointer;">
+    <input type="checkbox" id="fClosed" onchange="applyFilters()" style="width:auto;padding:0"> Ver cerrados
+  </label>
+  <div class="filter-sep"></div>
+  <div class="kpi-mini">
+    <div class="kpim"><div class="kpim-val" id="km-total" style="color:var(--solar)">—</div><div class="kpim-lbl">visibles</div></div>
+    <div class="kpim"><div class="kpim-val" id="km-alta" style="color:var(--red)">—</div><div class="kpim-lbl">alta prior.</div></div>
+    <div class="kpim"><div class="kpim-val" id="km-sla" style="color:var(--solar2)">—</div><div class="kpim-lbl">SLA en riesgo</div></div>
+    <div class="kpim"><div class="kpim-val" id="km-closed" style="color:var(--green)">—</div><div class="kpim-lbl">cerrados</div></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TABLE VIEW -->
+  <div class="view active" id="view-table">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('id')"># ID</th>
+            <th onclick="sortBy('deal')">Cliente / Deal</th>
+            <th onclick="sortBy('problema')">Problema</th>
+            <th onclick="sortBy('status')">Status</th>
+            <th onclick="sortBy('prioridad')">Prioridad</th>
+            <th onclick="sortBy('owner')">Owner</th>
+            <th onclick="sortBy('estado')">Estado</th>
+            <th onclick="sortBy('fecha')">Creado</th>
+            <th>SLA</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- KANBAN VIEW -->
+  <div class="view" id="view-kanban">
+    <div class="kanban" id="kanbanBoard"></div>
+  </div>
+
+  <!-- CALENDAR VIEW -->
+  <div class="view" id="view-calendar">
+    <div class="cal-view">
+      <div class="cal-header">
+        <button class="cal-nav-btn" onclick="calPrev()">←</button>
+        <h2 id="calTitle">—</h2>
+        <button class="cal-nav-btn" onclick="calNext()">→</button>
+        <span style="font-size:10px;color:var(--muted);margin-left:8px">Visitas y deadlines</span>
+      </div>
+      <div class="cal-grid" id="calDayLabels"></div>
+      <div class="cal-grid" id="calCells" style="margin-top:6px"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetailOnBg(event)">
+  <div class="detail-panel" id="detailPanel">
+    <div class="dp-head">
+      <div class="dp-title" id="dp-title">—</div>
+      <button class="dp-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="dp-body" id="dp-body"></div>
+    <div class="dp-actions" id="dp-actions"></div>
+  </div>
+</div>
+
+<!-- CLOSE MODAL -->
+<div class="modal-overlay" id="closeModal">
+  <div class="modal">
+    <h3>Cerrar ticket</h3>
+    <p>Describe la resolución. El ticket quedará en el historial con estado <strong style="color:var(--green)">Cerrado</strong>.</p>
+    <textarea id="closeNote" placeholder="Solución aplicada, observaciones finales…"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmClose()">✓ Cerrar ticket</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// NOCODB CONFIG — reemplaza para datos reales
+// ================================================================
+const NOCODB = {
+  url:    'https://TU-NOCODB-URL',
+  apiKey: 'TU_API_KEY',
+  tableId:'TU_TABLE_ID',
+};
+// Para activar API real:
+// async function loadFromAPI() {
+//   const r = await fetch(`${NOCODB.url}/api/v1/db/data/noco/${NOCODB.tableId}?limit=500`, {
+//     headers:{'xc-auth':NOCODB.apiKey}
+//   });
+//   const d = await r.json();
+//   TICKETS = d.list.map(mapAPItoTicket);
+//   init();
+// }
+// function mapAPItoTicket(r) {
+//   return {
+//     id: r['Client ID'],
+//     deal: r['Deal Name'],
+//     problema: r['Problema'],
+//     status: r['Status'],
+//     prioridad: r['Prioridad'],
+//     owner: r['Owner'],
+//     estado: r['Estado'],
+//     fecha: r['Fecha de creación']?.slice(0,10),
+//     deadline: r['Deadline']?.slice(0,10)||null,
+//     fechaVisita: r['Fecha de visita']?.slice(0,10)||null,
+//     solicitud: r['Solicitud'],
+//     solucion: r['Solución']||'',
+//     notas: r['Notas/Comentarios']||'',
+//     esc: r['Escalación requerida']||'',
+//     closed: r['Resuelto']=='true'||r['Resuelto']==true||r['Status']==='Cerrado',
+//     history: [],
+//   };
+// }
+
+// ================================================================
+// DATA (tus campos reales del CSV)
+// ================================================================
+let TICKETS = [
+  {id:'T-001',deal:'Mod Tototlan - Baja producción',problema:'Baja producción',status:'Análisis O&M',prioridad:'Mediana',owner:'alyssa@niko.mx',estado:'Jalisco',fecha:'2025-09-24',deadline:'2025-10-01',fechaVisita:null,solicitud:'Revisión de sistema con ZNE, caída abrupta de generación.',solucion:'',notas:'',esc:'Project Managers,Construcción',closed:false,history:[{ts:'2025-09-24',action:'Ticket creado',color:'#5b9cf6',note:''},{ts:'2025-09-30',action:'Asignado a O&M para análisis',color:'#f5a623',note:''}]},
+  {id:'T-002',deal:'Rancho las Jollas - Javier Boué',problema:'Cliente solicita cambios',status:'Gestión de garantía con EPC',prioridad:'Mediana',owner:'yatziry@niko.mx',estado:'Estado de México',fecha:'2025-10-27',deadline:'2025-11-03',fechaVisita:null,solicitud:'Baterías no funcionaron de respaldo. Revisión de configuración y transfer.',solucion:'',notas:'',esc:'',closed:false,history:[{ts:'2025-10-27',action:'Ticket creado',color:'#5b9cf6',note:''},{ts:'2025-11-13',action:'Contacto con soporte Huawei',color:'#f5a623',note:'Sin éxito en conf. remota. Posible problema en sitio.'}]},
+  {id:'T-003',deal:'Colegio Excelsior - Lupita De La Garza',problema:'Solicitud de mantenimiento',status:'En espera de confirmación de visita',prioridad:'Alta',owner:'alyssa@niko.mx',estado:'Coahuila',fecha:'2025-11-24',deadline:null,fechaVisita:null,solicitud:'Limpieza de paneles + revisión de recibo alto. Aumento de consumo 50%.',solucion:'',notas:'Suciedad y baja generación detectada.',esc:'Customer Success',closed:false,history:[{ts:'2025-11-24',action:'Ticket creado',color:'#5b9cf6',note:''},{ts:'2025-11-25',action:'Análisis de recibo realizado',color:'#f5a623',note:'Aumento de consumo 50% agosto-septiembre.'}]},
+  {id:'T-004',deal:'Joaquín Talavera - Pico de Verapaz',problema:'Sistema apagado',status:'En espera de confirmación de visita',prioridad:'Alta',owner:'alyssa@niko.mx',estado:'Ciudad De México',fecha:'2025-11-26',deadline:null,fechaVisita:null,solicitud:'Sistema en línea pero sin generación desde octubre. Posible ITM o extensión mal ponchada.',solucion:'',notas:'En esfuerzo de reconexión.',esc:'Construcción',closed:false,history:[{ts:'2025-11-26',action:'Ticket creado',color:'#5b9cf6',note:''},{ts:'2026-01-10',action:'Intento de reconexión remota',color:'#b07fea',note:'Sin éxito. Requiere visita física.'}]},
+  {id:'T-005',deal:'Guillermo Meza - Extremadura 72',problema:'Sistema apagado',status:'En espera de confirmación de visita',prioridad:'Alta',owner:'alyssa@niko.mx',estado:'Ciudad De México',fecha:'2025-11-26',deadline:null,fechaVisita:null,solicitud:'Sin generación desde julio. Revisar ITM y extensiones.',solucion:'',notas:'En esfuerzo de reconexión.',esc:'Construcción',closed:false,history:[{ts:'2025-11-26',action:'Ticket creado',color:'#5b9cf6',note:''}]},
+  {id:'T-006',deal:'Helen Carmona - Prol Mixtecos',problema:'Solicitud de rediseño/diagnóstico',status:'Análisis O&M',prioridad:'Baja',owner:'alyssa@niko.mx',estado:'Ciudad De México',fecha:'2025-12-10',deadline:'2025-12-12',fechaVisita:null,solicitud:'Actualizar aurora con inversor correcto. Instalado 20k vs 10k en sistema.',solucion:'Se revisó sitio. Falta actualizar registro.',notas:'',esc:'Ingeniería',closed:false,history:[{ts:'2025-12-10',action:'Ticket creado',color:'#5b9cf6',note:''},{ts:'2025-12-11',action:'Revisión en sitio realizada',color:'#3de8a0',note:'Inversor 20k instalado, aurora muestra 10k.'}]},
+  {id:'T-007',deal:'Periferico - Ramses Brito',problema:'Recibo alto',status:'En espera de EPC (visita agendada)',prioridad:'Alta',owner:'alyssa@niko.mx',estado:'Michoacán',fecha:'2026-02-20',deadline:null,fechaVisita:'2026-03-28',solicitud:'Cliente reporta recibo alto persistente.',solucion:'',notas:'',esc:'',closed:false,history:[{ts:'2026-02-20',action:'Ticket creado',color:'#5b9cf6',note:''},{ts:'2026-03-05',action:'Visita agendada con EPC',color:'#f5a623',note:'Fecha: 28 Mar'}]},
+  {id:'T-008',deal:'Cafetales 233 - Diego Vallejo',problema:'Intermitencia de internet/señal',status:'En espera de EPC (cotización)',prioridad:'Alta',owner:'alyssa@niko.mx',estado:'Ciudad De México',fecha:'2026-02-19',deadline:null,fechaVisita:null,solicitud:'Señal intermitente en monitor. Sin datos confiables.',solucion:'',notas:'',esc:'',closed:false,history:[{ts:'2026-02-19',action:'Ticket creado',color:'#5b9cf6',note:''}]},
+  {id:'T-009',deal:'Carlos Balderas - Hda Magnolia',problema:'Falla/Reemplazo de equipos',status:'En espera de EPC (cotización)',prioridad:'Mediana',owner:'alyssa@niko.mx',estado:'Estado de México',fecha:'2026-03-09',deadline:null,fechaVisita:null,solicitud:'Shelly dañado detectado en visita. Solicitud cotización a IMAC.',solucion:'',notas:'18/03: Se dañó el shelly en visita de esfuerzo de reconexión.',esc:'',closed:false,history:[{ts:'2026-03-09',action:'Ticket creado',color:'#5b9cf6',note:''},{ts:'2026-03-18',action:'Diagnóstico en sitio',color:'#b07fea',note:'Shelly quemado. Cotización solicitada a IMAC.'}]},
+  {id:'T-010',deal:'Alex Albarran - Rancho Castro',problema:'Recibo alto',status:'Nuevo',prioridad:'',owner:'',estado:'Estado de México',fecha:'2026-03-18',deadline:null,fechaVisita:null,solicitud:'Cliente con consumo alto persistente. Contacto vía Hilos.',solucion:'',notas:'',esc:'',closed:false,history:[{ts:'2026-03-18',action:'Ticket creado',color:'#5b9cf6',note:''}]},
+  {id:'T-011',deal:'Rodolfo Martínez - Chorrito 15B',problema:'Monitor fuera de línea',status:'Nuevo',prioridad:'',owner:'',estado:'Estado de México',fecha:'2026-03-19',deadline:null,fechaVisita:null,solicitud:'Sistema offline.',solucion:'',notas:'',esc:'',closed:false,history:[{ts:'2026-03-19',action:'Ticket creado',color:'#5b9cf6',note:''}]},
+  {id:'T-012',deal:'Iglesia 20 - Azela Robinson',problema:'Recibo alto',status:'En espera de CS',prioridad:'Mediana',owner:'alyssa@niko.mx',estado:'Ciudad De México',fecha:'2026-02-23',deadline:null,fechaVisita:null,solicitud:'Recibo alto. Análisis de consumo requerido.',solucion:'',notas:'',esc:'',closed:false,history:[{ts:'2026-02-23',action:'Ticket creado',color:'#5b9cf6',note:''},{ts:'2026-03-01',action:'Escalado a Customer Success',color:'#3de8a0',note:''}]},
+  {id:'T-013',deal:'Sistema resuelto - Cliente anterior',problema:'Monitor fuera de línea',status:'Cerrado',prioridad:'Baja',owner:'alyssa@niko.mx',estado:'Puebla',fecha:'2026-01-10',deadline:'2026-01-20',fechaVisita:'2026-01-15',solicitud:'Monitor sin conexión por 2 semanas.',solucion:'Se reemplazó módulo de comunicación y se reconfiguró red.',notas:'',esc:'Construcción',closed:true,history:[{ts:'2026-01-10',action:'Ticket creado',color:'#5b9cf6',note:''},{ts:'2026-01-15',action:'Visita técnica realizada',color:'#b07fea',note:'Módulo de comunicación dañado.'},{ts:'2026-01-18',action:'Ticket cerrado ✓',color:'#3de8a0',note:'Módulo reemplazado. Sistema operando normalmente.'}]},
+];
+
+// SLA en días según prioridad
+const SLA_DAYS = {Alta:3, Mediana:7, Baja:14};
+
+let filtered = [];
+let currentView = 'table';
+let sortField = 'fecha';
+let sortAsc = false;
+let selectedId = null;
+let closingId = null;
+let calYear, calMonth;
+
+// ================================================================
+// INIT
+// ================================================================
+function init() {
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  populateFilters();
+  applyFilters();
+}
+
+function populateFilters() {
+  const owners  = [...new Set(TICKETS.map(t=>t.owner).filter(Boolean))];
+  const statuses= [...new Set(TICKETS.map(t=>t.status).filter(Boolean))];
+  const probs   = [...new Set(TICKETS.map(t=>t.problema).filter(Boolean))];
+
+  const fO = document.getElementById('fOwner');
+  owners.forEach(o => { fO.innerHTML += `<option value="${o}">${o.replace('@niko.mx','')}</option>`; });
+
+  const fS = document.getElementById('fStatus');
+  statuses.forEach(s => { fS.innerHTML += `<option value="${s}">${s}</option>`; });
+
+  const fP = document.getElementById('fProblema');
+  probs.sort().forEach(p => { fP.innerHTML += `<option value="${p}">${p}</option>`; });
+}
+
+function applyFilters() {
+  const owner    = document.getElementById('fOwner').value;
+  const status   = document.getElementById('fStatus').value;
+  const prioridad= document.getElementById('fPrioridad').value;
+  const problema = document.getElementById('fProblema').value;
+  const search   = document.getElementById('fSearch').value.toLowerCase();
+  const showClosed = document.getElementById('fClosed').checked;
+
+  filtered = TICKETS.filter(t => {
+    if (!showClosed && t.closed) return false;
+    if (owner    && t.owner    !== owner)    return false;
+    if (status   && t.status   !== status)   return false;
+    if (prioridad&& t.prioridad!== prioridad)return false;
+    if (problema && t.problema !== problema) return false;
+    if (search   && !t.deal.toLowerCase().includes(search) && !t.problema.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a,b) => {
+    let va = a[sortField]||'', vb = b[sortField]||'';
+    if (va<vb) return sortAsc?-1:1;
+    if (va>vb) return sortAsc?1:-1;
+    return 0;
+  });
+
+  updateKPIs();
+  if (currentView==='table')    renderTable();
+  if (currentView==='kanban')   renderKanban();
+  if (currentView==='calendar') renderCalendar();
+}
+
+function updateKPIs() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const alta = filtered.filter(t=>t.prioridad==='Alta'&&!t.closed).length;
+  let slaRisk = 0;
+  filtered.filter(t=>!t.closed).forEach(t => {
+    const days = SLA_DAYS[t.prioridad];
+    if (!days) return;
+    const created = new Date(t.fecha);
+    const deadline = new Date(created); deadline.setDate(deadline.getDate()+days);
+    const rem = Math.ceil((deadline-today)/(1000*60*60*24));
+    if (rem<=1) slaRisk++;
+  });
+  const closed = TICKETS.filter(t=>t.closed).length;
+  document.getElementById('km-total').textContent = filtered.length;
+  document.getElementById('km-alta').textContent  = alta;
+  document.getElementById('km-sla').textContent   = slaRisk;
+  document.getElementById('km-closed').textContent= closed;
+}
+
+// ================================================================
+// SLA HELPERS
+// ================================================================
+function getSLA(t) {
+  if (t.closed) return {label:'Cerrado',cls:'sla-na',pct:100,color:'#3de8a0'};
+  const days = SLA_DAYS[t.prioridad];
+  if (!days) return {label:'Sin SLA',cls:'sla-na',pct:0,color:'#505870'};
+  const today = new Date(); today.setHours(0,0,0,0);
+  const created = new Date(t.fecha);
+  const deadline = new Date(created); deadline.setDate(deadline.getDate()+days);
+  const rem = Math.ceil((deadline-today)/(1000*60*60*24));
+  const elapsed = days - rem;
+  const pct = Math.min(100, Math.max(0, (elapsed/days)*100));
+  if (rem<0) return {label:`+${Math.abs(rem)}d breach`,cls:'sla-breach',pct:100,color:'#f25f5c'};
+  if (rem<=1) return {label:`${rem}d restante`,cls:'sla-warn',pct,color:'#ffd166'};
+  return {label:`${rem}d restante`,cls:'sla-ok',pct,color:'#3de8a0'};
+}
+
+// ================================================================
+// TABLE
+// ================================================================
+function renderTable() {
+  const tbody = document.getElementById('tblBody');
+  if (!filtered.length) { tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted)">Sin resultados</td></tr>`; return; }
+  tbody.innerHTML = filtered.map(t => {
+    const sla = getSLA(t);
+    return `<tr class="${t.closed?'closed':''}" onclick="openDetail('${t.id}')">
+      <td style="font-size:10px;color:var(--muted)">${t.id}</td>
+      <td class="tdmain">${t.deal}</td>
+      <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.problema||'—'}</td>
+      <td>${t.status ? `<span class="badge ${badgeClass(t.status)}">${t.status}</span>` : '—'}</td>
+      <td>${pdotHtml(t.prioridad)}${t.prioridad||'—'}</td>
+      <td style="font-size:10px">${t.owner?t.owner.replace('@niko.mx',''):'—'}</td>
+      <td style="font-size:10px">${t.estado||'—'}</td>
+      <td style="font-size:10px;color:var(--muted)">${t.fecha}</td>
+      <td><span class="badge sla-chip ${sla.cls}">${sla.label}</span></td>
+      <td onclick="event.stopPropagation()">
+        ${!t.closed ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:9px" onclick="startClose('${t.id}')">Cerrar</button>` : '<span style="font-size:10px;color:var(--green)">✓</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function sortBy(field) {
+  if (sortField===field) sortAsc=!sortAsc; else { sortField=field; sortAsc=true; }
+  applyFilters();
+}
+
+// ================================================================
+// KANBAN
+// ================================================================
+const STATUS_ORDER = ['Nuevo','Análisis O&M','En espera de confirmación de visita','En espera de EPC (cotización)','En espera de EPC (visita agendada)','En espera de CS','Revisión de reporte','Gestión de garantía con EPC','Cerrado'];
+const STATUS_COLORS = {'Nuevo':'#5b9cf6','Análisis O&M':'#f5a623','En espera de confirmación de visita':'#b07fea','En espera de EPC (cotización)':'#f25f5c','En espera de EPC (visita agendada)':'#fd79a8','En espera de CS':'#3de8a0','Revisión de reporte':'#ffd166','Gestión de garantía con EPC':'#89b4ff','Cerrado':'#3de8a080'};
+
+function renderKanban() {
+  const board = document.getElementById('kanbanBoard');
+  const showClosed = document.getElementById('fClosed').checked;
+  let statuses = [...new Set(filtered.map(t=>t.status).filter(Boolean))];
+  statuses.sort((a,b)=>(STATUS_ORDER.indexOf(a)||99)-(STATUS_ORDER.indexOf(b)||99));
+  if (!statuses.length) { board.innerHTML='<div class="empty"><div class="empty-icon">🗂</div><div class="empty-txt">Sin tickets</div></div>'; return; }
+
+  board.innerHTML = statuses.map(s => {
+    const cards = filtered.filter(t=>t.status===s);
+    const col = STATUS_COLORS[s]||'#7a85a0';
+    return `<div class="k-col">
+      <div class="k-head">
+        <span class="k-title" style="color:${col}">${s}</span>
+        <span class="k-count">${cards.length}</span>
+      </div>
+      ${cards.map(t => {
+        const sla = getSLA(t);
+        return `<div class="k-card ${t.closed?'closed':''}" onclick="openDetail('${t.id}')">
+          <div class="k-card-title">${t.deal}</div>
+          <div class="k-card-meta">
+            ${t.prioridad?`<span class="badge ${t.prioridad==='Alta'?'b-epc':t.prioridad==='Mediana'?'b-revision':'b-cs'}">${t.prioridad}</span>`:''}
+            ${t.problema?`<span style="font-size:9px;color:var(--muted2);background:var(--s3);padding:2px 6px;border-radius:3px">${t.problema}</span>`:''}
+          </div>
+          <div class="k-card-footer">
+            <span>${t.owner?t.owner.replace('@niko.mx',''):'Sin asignar'}</span>
+            <span class="sla-chip ${sla.cls}">${sla.label}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ================================================================
+// CALENDAR
+// ================================================================
+function renderCalendar() {
+  const DAY_NAMES = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+  const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('calTitle').textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+
+  const lbls = document.getElementById('calDayLabels');
+  lbls.innerHTML = DAY_NAMES.map(d=>`<div class="cal-day-lbl">${d}</div>`).join('');
+
+  const cells = document.getElementById('calCells');
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const offset = firstDay===0?6:firstDay-1;
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Build event map
+  const evMap = {};
+  TICKETS.forEach(t => {
+    // Fecha de visita
+    if (t.fechaVisita) {
+      const d = t.fechaVisita.slice(0,10);
+      if (!evMap[d]) evMap[d]=[];
+      evMap[d].push({label:t.deal.split(' - ')[1]||t.deal,color:'#b07fea',id:t.id,type:'visita'});
+    }
+    // Deadline
+    if (t.deadline) {
+      const d = t.deadline.slice(0,10);
+      if (!evMap[d]) evMap[d]=[];
+      evMap[d].push({label:t.deal.split(' - ')[1]||t.deal,color:'#f25f5c',id:t.id,type:'deadline'});
+    }
+  });
+
+  let html = '';
+  for (let i=0;i<offset;i++) html+=`<div class="cal-cell other-month"></div>`;
+  for (let d=1;d<=daysInMonth;d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cellDate = new Date(calYear, calMonth, d);
+    const isToday = cellDate.getTime()===today.getTime();
+    const events = evMap[dateStr]||[];
+    html += `<div class="cal-cell ${isToday?'today':''}">
+      <div class="cal-date">${d}</div>
+      ${events.map(e=>`<div class="cal-event" style="background:${e.color}22;border-color:${e.color};color:${e.color}" onclick="openDetail('${e.id}')" title="${e.type==='visita'?'🔧 Visita':'⏰ Deadline'}: ${e.label}">${e.type==='visita'?'🔧':'⏰'} ${e.label}</div>`).join('')}
+    </div>`;
+  }
+  cells.innerHTML = html;
+}
+
+function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
+function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
+
+// ================================================================
+// DETAIL PANEL
+// ================================================================
+function openDetail(id) {
+  selectedId = id;
+  const t = TICKETS.find(x=>x.id===id);
+  if (!t) return;
+  document.getElementById('dp-title').textContent = t.deal;
+  const sla = getSLA(t);
+
+  const body = document.getElementById('dp-body');
+  body.innerHTML = `
+    <!-- STATUS ROW -->
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px">
+      <span class="badge ${badgeClass(t.status)}">${t.status||'Sin status'}</span>
+      ${t.prioridad?`<span class="badge ${t.prioridad==='Alta'?'b-epc':t.prioridad==='Mediana'?'b-revision':'b-cs'}">${t.prioridad}</span>`:''}
+      <span class="badge sla-chip ${sla.cls}">${sla.label}</span>
+      ${t.closed?'<span class="badge b-cerrado">✓ Cerrado</span>':''}
+    </div>
+
+    <!-- SLA BAR -->
+    ${t.prioridad && !t.closed ? `
+    <div style="margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px">
+        <span>SLA ${SLA_DAYS[t.prioridad]}d · ${t.prioridad}</span>
+        <span style="color:${sla.color}">${sla.label}</span>
+      </div>
+      <div class="sla-bar-wrap"><div class="sla-bar" style="width:${sla.pct}%;background:${sla.color}"></div></div>
+    </div>` : ''}
+
+    <!-- EDIT FIELDS -->
+    <div class="dp-section">
+      <div class="dp-section-title">Datos del ticket</div>
+      <div class="dp-grid">
+        <div class="dp-field">
+          <label>Deal Name</label>
+          <input id="ef-deal" value="${escHtml(t.deal)}">
+        </div>
+        <div class="dp-field">
+          <label>Owner</label>
+          <select id="ef-owner">
+            <option value="">Sin asignar</option>
+            ${[...new Set(TICKETS.map(x=>x.owner).filter(Boolean))].map(o=>`<option value="${o}" ${t.owner===o?'selected':''}>${o.replace('@niko.mx','')}</option>`).join('')}
+            <option value="yatziry@niko.mx" ${t.owner==='yatziry@niko.mx'?'selected':''}>yatziry</option>
+          </select>
+        </div>
+        <div class="dp-field">
+          <label>Status</label>
+          <select id="ef-status">
+            ${STATUS_ORDER.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="dp-field">
+          <label>Prioridad</label>
+          <select id="ef-prioridad">
+            <option value="">—</option>
+            <option value="Alta" ${t.prioridad==='Alta'?'selected':''}>Alta</option>
+            <option value="Mediana" ${t.prioridad==='Mediana'?'selected':''}>Mediana</option>
+            <option value="Baja" ${t.prioridad==='Baja'?'selected':''}>Baja</option>
+          </select>
+        </div>
+        <div class="dp-field">
+          <label>Fecha de visita</label>
+          <input type="date" id="ef-visita" value="${t.fechaVisita||''}">
+        </div>
+        <div class="dp-field">
+          <label>Deadline</label>
+          <input type="date" id="ef-deadline" value="${t.deadline||''}">
+        </div>
+        <div class="dp-field" style="grid-column:span 2">
+          <label>Escalación requerida</label>
+          <input id="ef-esc" value="${escHtml(t.esc||'')}">
+        </div>
+      </div>
+    </div>
+
+    <!-- SOLICITUD -->
+    <div class="dp-section">
+      <div class="dp-section-title">Solicitud original</div>
+      <div class="dp-field">
+        <textarea id="ef-solicitud">${escHtml(t.solicitud||'')}</textarea>
+      </div>
+    </div>
+
+    <!-- SOLUCIÓN -->
+    <div class="dp-section">
+      <div class="dp-section-title">Solución / Avance</div>
+      <div class="dp-field">
+        <textarea id="ef-solucion" placeholder="Describe el avance o solución aplicada…">${escHtml(t.solucion||'')}</textarea>
+      </div>
+    </div>
+
+    <!-- NOTAS -->
+    <div class="dp-section">
+      <div class="dp-section-title">Notas / Comentarios</div>
+      <div class="dp-field">
+        <textarea id="ef-notas" placeholder="Notas adicionales…">${escHtml(t.notas||'')}</textarea>
+      </div>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div class="dp-section">
+      <div class="dp-section-title">Historial de actividad</div>
+      <div class="timeline" id="dp-timeline">
+        ${(t.history||[]).map(h=>`
+          <div class="tl-item">
+            <div class="tl-dot" style="background:${h.color}"></div>
+            <div class="tl-content">
+              <div class="tl-action">${h.action}</div>
+              <div class="tl-time">${h.ts}</div>
+              ${h.note?`<div class="tl-note">${h.note}</div>`:''}
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="add-note" style="margin-top:12px">
+        <input id="noteInput" placeholder="Agregar nota al historial…" onkeydown="if(event.key==='Enter')addNote('${t.id}')">
+        <button class="btn btn-ghost" onclick="addNote('${t.id}')">+ Nota</button>
+      </div>
+    </div>
+  `;
+
+  const actions = document.getElementById('dp-actions');
+  actions.innerHTML = `
+    <button class="btn btn-primary" onclick="saveEdit('${t.id}')">💾 Guardar cambios</button>
+    ${!t.closed?`<button class="btn btn-success" onclick="startClose('${t.id}')">✓ Cerrar ticket</button>`:'<span style="font-size:11px;color:var(--green)">✓ Ticket cerrado</span>'}
+    <button class="btn btn-ghost" onclick="closeDetail()">Cancelar</button>
+  `;
+
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function saveEdit(id) {
+  const t = TICKETS.find(x=>x.id===id);
+  if (!t) return;
+  const prev = JSON.stringify({status:t.status,prioridad:t.prioridad,owner:t.owner});
+  t.deal      = document.getElementById('ef-deal').value;
+  t.owner     = document.getElementById('ef-owner').value;
+  t.status    = document.getElementById('ef-status').value;
+  t.prioridad = document.getElementById('ef-prioridad').value;
+  t.fechaVisita = document.getElementById('ef-visita').value||null;
+  t.deadline  = document.getElementById('ef-deadline').value||null;
+  t.esc       = document.getElementById('ef-esc').value;
+  t.solicitud = document.getElementById('ef-solicitud').value;
+  t.solucion  = document.getElementById('ef-solucion').value;
+  t.notas     = document.getElementById('ef-notas').value;
+  const now = new Date().toISOString().slice(0,10);
+  t.history.push({ts:now,action:'Ticket editado',color:'#f5a623',note:`Status: ${t.status} · Prioridad: ${t.prioridad||'—'}`});
+  applyFilters();
+  openDetail(id);
+  // Para guardar en NocoDB real, descomenta:
+  // await fetch(`${NOCODB.url}/api/v1/db/data/noco/${NOCODB.tableId}/${t.rowId}`, {
+  //   method:'PATCH', headers:{'xc-auth':NOCODB.apiKey,'Content-Type':'application/json'},
+  //   body: JSON.stringify({ Status: t.status, Prioridad: t.prioridad, Owner: t.owner, ... })
+  // });
+}
+
+function addNote(id) {
+  const t = TICKETS.find(x=>x.id===id);
+  const inp = document.getElementById('noteInput');
+  const txt = inp.value.trim();
+  if (!txt) return;
+  const now = new Date().toISOString().slice(0,10);
+  t.history.push({ts:now,action:'Nota agregada',color:'#7a85a0',note:txt});
+  inp.value='';
+  const tl = document.getElementById('dp-timeline');
+  tl.innerHTML += `<div class="tl-item"><div class="tl-dot" style="background:#7a85a0"></div><div class="tl-content"><div class="tl-action">Nota agregada</div><div class="tl-time">${now}</div><div class="tl-note">${txt}</div></div></div>`;
+}
+
+function closeDetail() { document.getElementById('detailOverlay').classList.remove('open'); }
+function closeDetailOnBg(e) { if(e.target===document.getElementById('detailOverlay')) closeDetail(); }
+
+// ================================================================
+// CLOSE TICKET
+// ================================================================
+function startClose(id) {
+  closingId = id;
+  document.getElementById('closeNote').value='';
+  document.getElementById('closeModal').classList.add('open');
+}
+function closeModal() { document.getElementById('closeModal').classList.remove('open'); }
+function confirmClose() {
+  const t = TICKETS.find(x=>x.id===closingId);
+  if (!t) return;
+  const note = document.getElementById('closeNote').value.trim();
+  const now = new Date().toISOString().slice(0,10);
+  t.closed = true;
+  t.status = 'Cerrado';
+  t.solucion = note || t.solucion;
+  t.history.push({ts:now,action:'Ticket cerrado ✓',color:'#3de8a0',note:note||'Sin nota de cierre.'});
+  closeModal();
+  closeDetail();
+  applyFilters();
+}
+
+// ================================================================
+// NEW TICKET
+// ================================================================
+function openNew() {
+  const id = 'T-'+String(TICKETS.length+1).padStart(3,'0');
+  const today = new Date().toISOString().slice(0,10);
+  TICKETS.unshift({id,deal:'Nuevo ticket',problema:'',status:'Nuevo',prioridad:'',owner:'',estado:'',fecha:today,deadline:null,fechaVisita:null,solicitud:'',solucion:'',notas:'',esc:'',closed:false,history:[{ts:today,action:'Ticket creado',color:'#5b9cf6',note:''}]});
+  applyFilters();
+  openDetail(id);
+}
+
+// ================================================================
+// VIEW SWITCHER
+// ================================================================
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.tab').forEach(el=>{ if(el.textContent.toLowerCase().includes(v==='table'?'lista':v==='kanban'?'kanban':'cal')) el.classList.add('active'); });
+  applyFilters();
+}
+
+// ================================================================
+// HELPERS
+// ================================================================
+function badgeClass(s) {
+  if (!s) return 'b-nuevo';
+  if (s==='Nuevo') return 'b-nuevo';
+  if (s.startsWith('Análisis')) return 'b-analisis';
+  if (s.includes('confirmación')) return 'b-visita';
+  if (s.includes('EPC')) return 'b-epc';
+  if (s.includes('CS')) return 'b-cs';
+  if (s.includes('Revisión')) return 'b-revision';
+  if (s.includes('garantía')) return 'b-garantia';
+  if (s==='Cerrado') return 'b-cerrado';
+  return 'b-nuevo';
+}
+function pdotHtml(p) {
+  if (p==='Alta') return '<span class="pdot p-alta"></span>';
+  if (p==='Mediana') return '<span class="pdot p-media"></span>';
+  if (p==='Baja') return '<span class="pdot p-baja"></span>';
+  return '';
+}
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ================================================================
+// START
+// ================================================================
+init();
+</script>
+</body>
+</html>
